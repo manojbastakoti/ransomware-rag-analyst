@@ -1,0 +1,44 @@
+digraph G {
+  rankdir=TB; newrank=true; nodesep=0.35; ranksep=0.45; fontname="Helvetica";
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, fillcolor="#EEF2FF", color="#6366F1", margin="0.15,0.08"];
+  edge [color="#475569", fontname="Helvetica", fontsize=9];
+
+  user [label="SOC / CTI analyst\nquestion · report · technique IDs", fillcolor="#FEF3C7", color="#D97706"];
+  ui   [label="Gradio web app\nAsk · Checklist & Approval · Report Summarizer · Evaluation · Monitoring", fillcolor="#E0F2FE", color="#0284C7"];
+  guard[label="Guardrails\ninput validation · offensive-use refusal · prompt-injection filter", fillcolor="#FEE2E2", color="#DC2626"];
+  plan [label="Agent planner\nLLM JSON tool selection (Ollama / OpenAI-compatible)\nfallback: rule-based intent router"];
+
+  subgraph cluster_tools { label="Agent tools"; style="rounded,dashed"; color="#6366F1"; fontsize=11;
+    t1 [label="1 · search_ransomware_intel\nhybrid dense + BM25\nmetadata filters"];
+    t2 [label="2 · map_attack_techniques\nevidence → kill chain"];
+    t3 [label="3 · build_defensive_checklist\nmonitor · harden · contain"];
+    t4 [label="4 · summarize_report\nexecutive summary"];
+  }
+  ans  [label="Grounded answer with [S#] citations\nLLM or extractive"];
+  cv   [label="Citation verifier\ndrops unknown refs · rejects ungrounded answers", fillcolor="#FEE2E2", color="#DC2626"];
+  hitl [label="Human-in-the-loop\ncontainment actions stay PENDING APPROVAL", shape=diamond, style=filled, fillcolor="#DCFCE7", color="#16A34A"];
+  out  [label="Approved checklist export + answer, evidence\n& agent trace shown in the web app\naudit log approvals.jsonl", fillcolor="#DCFCE7", color="#16A34A"];
+  mon  [label="Monitoring log\nlatency · tools · errors (query hashed)", shape=cylinder, fillcolor="#F1F5F9", color="#64748B"];
+
+  subgraph cluster_data { label="Offline data pipeline"; style="rounded,dashed"; color="#64748B"; fontsize=11;
+    cisa [label="10 CISA #StopRansomware advisories\n+ CISA response checklist\n+ prevention baseline", fillcolor="#F1F5F9", color="#64748B"];
+    stix [label="MITRE ATT&CK v20 STIX\n(GitHub)", fillcolor="#F1F5F9", color="#64748B"];
+    fetch[label="fetch_attack.py", fillcolor="#F1F5F9", color="#64748B"];
+    ing  [label="ingest.py\nsection chunks + metadata", fillcolor="#F1F5F9", color="#64748B"];
+    bld  [label="build_index.py\nembeddings + BM25", fillcolor="#F1F5F9", color="#64748B"];
+    idx  [label="Vector index\n47 docs · 190 chunks\nactor · sector · technique · tactic", shape=cylinder, fillcolor="#E2E8F0", color="#334155"];
+    kb   [label="ATT&CK knowledge base\nmitigations · detection strategies\nlegacy-ID map", shape=cylinder, fillcolor="#E2E8F0", color="#334155"];
+    stix -> fetch -> ing; cisa -> ing -> bld -> idx; fetch -> kb;
+  }
+
+  user -> ui -> guard -> plan;
+  plan -> t1; plan -> t2; plan -> t3; plan -> t4;
+  {rank=same; t1; t2; t3; t4;}
+  t1 -> t2 -> t3 -> t4 [style=invis];
+  idx -> t1 [style=dashed, dir=both, label=" query"];
+  kb -> t2 [style=dashed, dir=both]; kb -> t3 [style=dashed, dir=both];
+  t1 -> ans; t2 -> ans; t3 -> ans; t4 -> ans;
+  ans -> cv;
+  cv -> hitl; hitl -> out [label=" named analyst\n + justification"];
+  plan -> mon [style=dotted];
+}

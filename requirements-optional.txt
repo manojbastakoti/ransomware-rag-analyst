@@ -1,0 +1,2 @@
+# Neural embeddings (BAAI/bge-small-en-v1.5); downloads ~130 MB on first use
+sentence-transformers>=3.0
